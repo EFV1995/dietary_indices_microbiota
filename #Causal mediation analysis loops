@@ -1,0 +1,255 @@
+#Causal mediation analysis 
+
+# Load necessary libraries
+library(phyloseq)
+library(compositions)
+library(dplyr)
+library(writexl)
+library(mediation)
+library(ggplot2)
+
+# Normalize Data
+# Combine the relevant columns into a data frame for normalization
+combined_data_to_normalize <- data.frame(
+  Bifidobacterium_infant = otu_genus_with_tax_genus_infant$g__Bifidobacterium[1:96],
+  E_coli_infant = otu_genus_with_tax_genus_infant$`g__Escherichia-Shigella`[1:96],
+  Streptococcus_infant = otu_genus_with_tax_genus_infant$g__Streptococcus[1:96],
+  Staphylococcus_infant = otu_genus_with_tax_genus_infant$g__Staphylococcus[1:96],
+  Enterococcus_infant = otu_genus_with_tax_genus_infant$g__Enterococcus[1:96],
+  Prevotella_mother = otu_genus_with_tax_genus_mother$g__Prevotella[1:96],
+  Bacteroides_mother = otu_genus_with_tax_genus_mother$g__Bacteroides[1:96],
+  Faecalibacterium_mother = otu_genus_with_tax_genus_mother$g__Faecalibacterium[1:96],
+  Collinsella_mother = otu_genus_with_tax_genus_mother$g__Collinsella[1:96],
+  Agathobacter_mother = otu_genus_with_tax_genus_mother$g__Agathobacter[1:96],
+  Anaerostipes_mother = otu_genus_with_tax_genus_mother$g__Anaerostipes[1:96],
+  Ruminococcus_mother = otu_genus_with_tax_genus_mother$g__Ruminococcus_torques_group[1:96],
+  Finegoldia_mother = otu_genus_with_tax_genus_mother$g__Finegoldia[1:96],
+  Coprococcus_mother = otu_genus_with_tax_genus_mother$g__Coprococcus[1:96],
+  Peptoniphilus_mother = otu_genus_with_tax_genus_mother$g__Peptoniphilus[1:96],
+  Fusicatenibacter_mother = otu_genus_with_tax_genus_mother$g__Fusicatenibacter[1:96],
+  Bifidobacterium_mother = otu_genus_with_tax_genus_mother$g__Bifidobacterium[1:96],
+  Lactobacillus_mother = otu_genus_with_tax_genus_mother$g__Lactobacillus[1:96],
+  Subdoligranulum_mother = otu_genus_with_tax_genus_mother$g__Subdoligranulum[1:96],
+  Blautia_mother = otu_genus_with_tax_genus_mother$g__Blautia[1:96],
+  Dorea_mother = otu_genus_with_tax_genus_mother$g__Dorea[1:96],
+  E_coli_mother = otu_genus_with_tax_genus_mother$`g__Escherichia-Shigella`[1:96],
+  Observed_mother = alpha_diversity_mother$Observed[1:96],
+  Chao1_mother = alpha_diversity_mother$Chao1[1:96],
+  Observed_infant = alpha_diversity_infant$Observed[1:96],
+  Chao1_infant = alpha_diversity_infant$Chao1[1:96]
+)
+
+# Apply CLR transformation
+clr_transformed <- clr(combined_data_to_normalize)
+
+# Convert to a dataframe for easier handling
+clr_transformed_df <- as.data.frame(clr_transformed)
+
+# Combine CLR transformed data with other relevant variables
+combined_data_CLR <- data.frame(
+  Bifidobacterium_infant = clr_transformed_df$Bifidobacterium_infant[1:96],
+  E_coli_infant = clr_transformed_df$E_coli_infant[1:96],
+  Streptococcus_infant = clr_transformed_df$Streptococcus_infant[1:96],
+  Staphylococcus_infant = clr_transformed_df$Staphylococcus_infant[1:96],
+  Enterococcus_infant = clr_transformed_df$Enterococcus_infant[1:96],
+  Total_HEI_sum = sample_data_mediation$Total_HEI_sum[1:96],
+  Total_DII_sum = sample_data_mediation$Total_DII_sum[1:96],
+  Total_DQI_sum = sample_data_mediation$Total_DQI_sum[1:96],
+  Total_MMDS_sum = sample_data_mediation$Total_MMDS_sum[1:96],
+  Prevotella_mother = clr_transformed_df$Prevotella_mother[1:96],
+  Bacteroides_mother = clr_transformed_df$Bacteroides_mother[1:96],
+  Faecalibacterium_mother = clr_transformed_df$Faecalibacterium_mother[1:96],
+  Collinsella_mother = clr_transformed_df$Collinsella_mother[1:96],
+  Agathobacter_mother = clr_transformed_df$Agathobacter_mother[1:96],
+  Anaerostipes_mother = clr_transformed_df$Anaerostipes_mother[1:96],
+  Ruminococcus_mother = clr_transformed_df$Ruminococcus_mother[1:96],
+  Finegoldia_mother = clr_transformed_df$Finegoldia_mother[1:96],
+  Coprococcus_mother = clr_transformed_df$Coprococcus_mother[1:96],
+  Peptoniphilus_mother = clr_transformed_df$Peptoniphilus_mother[1:96],
+  Fusicatenibacter_mother = clr_transformed_df$Fusicatenibacter_mother[1:96],
+  Bifidobacterium_mother = clr_transformed_df$Bifidobacterium_mother[1:96],
+  Lactobacillus_mother = clr_transformed_df$Lactobacillus_mother[1:96],
+  Subdoligranulum_mother = clr_transformed_df$Subdoligranulum_mother[1:96],
+  Blautia_mother = clr_transformed_df$Blautia_mother[1:96],
+  Dorea_mother = clr_transformed_df$Dorea_mother[1:96],
+  E_coli_mother = clr_transformed_df$E_coli_mother[1:96],
+  Bifido_Abundance_Category = sample_data_mediation$Bifido_Abundance_Category[1:96],
+  Parto = sample_data_mediation$Parto[1:96], 
+  Observed_mother = clr_transformed_df$Observed_mother[1:96],
+  Chao1_mother = clr_transformed_df$Chao1_mother[1:96],
+  Shannon_mother = alpha_diversity_mother$Shannon[1:96],
+  Simpson_mother = alpha_diversity_mother$Simpson[1:96],
+  Observed_infant = clr_transformed_df$Observed_infant[1:96],
+  Chao1_infant = clr_transformed_df$Chao1_infant[1:96],
+  Shannon_infant = alpha_diversity_infant$Shannon[1:96],
+  Simpson_infant = alpha_diversity_infant$Simpson[1:96]
+)
+
+# Convert certain variables to factors
+combined_data_CLR$Parto <- as.factor(combined_data_CLR$Parto)
+combined_data_CLR$Bifido_Abundance_Category <- as.factor(combined_data_CLR$Bifido_Abundance_Category)
+
+# Verify the structure of combined_data
+str(combined_data_CLR)
+
+# Loop casual mediation analysis without adjusting 
+# Define variables for mediation analysis
+diets <- c("Total_HEI_sum", "Total_DQI_sum", "Total_DII_sum", "Total_MMDS_sum")
+maternal_core <- c("E_coli_mother", "Bifidobacterium_mother", "Blautia_mother", "Collinsella_mother", "Subdoligranulum_mother", "Agathobacter_mother", "Faecalibacterium_mother", "Bacteroides_mother", "Anaerostipes_mother", "Fusicatenibacter_mother", "Dorea_mother", "Ruminococcus_mother", "Finegoldia_mother", "Coprococcus_mother", "Peptoniphilus_mother","Lactobacillus_mother", "Observed_mother", "Chao1_mother","Shannon_mother", "Simpson_mother")
+infant_core <- c("E_coli_infant", "Bifidobacterium_infant", "Streptococcus_infant", "Staphylococcus_infant", "Enterococcus_infant", "Observed_infant", "Chao1_infant","Shannon_infant", "Simpson_infant")
+
+# Initialize the results data frame
+results_no_adj <- data.frame(Outcome = character(), Mediator = character(), TotalEffect = numeric(), TotalEffect_CI = character(), TotalEffect_p = numeric(), ADE = numeric(), ADE_CI = character(), ADE_p = numeric(), ACME = numeric(), ACME_CI = character(), ACME_p = numeric(), PercentMediated = numeric(), PercentMediated_CI = character(), stringsAsFactors = FALSE)
+
+# Loop through each combination of diet, maternal_core, and infant_core
+for (diet in diets) {
+  for (m_core in maternal_core) {
+    for (i_core in infant_core) {
+      # Mediator Model
+      med.fit <- lm(as.formula(paste(m_core, "~", diet)), data = combined_data_CLR)
+      
+      # Outcome Model
+      out.fit <- lm(as.formula(paste(i_core, "~", diet, "+", m_core)), data = combined_data_CLR)
+      
+      # Causal Mediation Analysis
+      med.out <- mediate(med.fit, out.fit, treat = diet, mediator = m_core, sims = 1000)
+      
+      # Extract values
+      med.out.summary <- summary(med.out)
+      
+      total_effect <- med.out.summary$tau.coef
+      total_effect_CI <- paste(med.out.summary$tau.ci[1], "-", med.out.summary$tau.ci[2])
+      total_effect_p <- med.out.summary$tau.p
+      ade <- med.out.summary$d0
+      ade_CI <- paste(med.out.summary$d0.ci[1], "-", med.out.summary$d0.ci[2])
+      ade_p <- med.out.summary$d0.p
+      acme <- med.out.summary$z0
+      acme_CI <- paste(med.out.summary$z0.ci[1], "-", med.out.summary$z0.ci[2])
+      acme_p <- med.out.summary$z0.p
+      percent_mediated <- (acme / total_effect)
+      percent_mediated_CI <- paste((med.out.summary$z0.ci[1] / med.out.summary$tau.coef), "-", (med.out.summary$z0.ci[2] / med.out.summary$tau.coef))
+      
+      # Check for negative percent mediated and set to NA if found
+      if (percent_mediated < 0) {
+        percent_mediated <- NA
+      }
+      
+      # Append results
+      results_no_adj <- rbind(results_no_adj, data.frame(Outcome = i_core, Mediator = m_core, TotalEffect = total_effect, TotalEffect_CI = total_effect_CI, TotalEffect_p = total_effect_p, ADE = ade, ADE_CI = ade_CI, ADE_p = ade_p, ACME = acme, ACME_CI = acme_CI, ACME_p = acme_p, PercentMediated = percent_mediated, PercentMediated_CI = percent_mediated_CI))
+    }
+  }
+}
+
+# Display the results
+print(results_no_adj)
+
+# Write results to Excel
+write_xlsx(results_no_adj, path = "mediation_results_CLR_no_adj.xlsx")
+
+# Filter significant results
+significant_results <- results_no_adj %>%
+  filter(TotalEffect_p < 0.055 | ADE_p < 0.055 | ACME_p < 0.055)
+
+# Display significant results
+print(significant_results)
+
+# Write significant results to Excel
+write_xlsx(significant_results, path = "mediation_results_CLR_significant.xlsx")
+
+# Sensitivity Analysis for significant results
+# Define variables for sensitivity analysis
+diets_sens <- c("Total_HEI_sum", "Total_MMDS_sum")
+
+# Loop for each diet adjusted for delivery as a confounder
+
+# Define your variables
+diets <- c("Total_HEI_sum","Total_DQI_sum", "Total_DII_sum", "Total_MMDS_sum")
+
+maternal_core <- c("E_coli_mother", "Bifidobacterium_mother", "Blautia_mother", "Collinsella_mother", "Subdoligranulum_mother", "Agathobacter_mother", "Faecalibacterium_mother", "Bacteroides_mother", "Anaerostipes_mother", "Fusicatenibacter_mother", "Dorea_mother", "Ruminococcus_mother", "Finegoldia_mother", "Coprococcus_mother", "Peptoniphilus_mother","Lactobacillus_mother", "Observed_mother", "Chao1_mother","Shannon_mother", "Simpson_mother")
+infant_core <- c("E_coli_infant", "Bifidobacterium_infant", "Streptococcus_infant", 
+                 "Staphylococcus_infant", "Enterococcus_infant","Observed_infant",
+                 "Chao1_infant","Shannon_infant", "Simpson_infant")
+
+# Initialize the results data frame
+results <- data.frame(Outcome = character(), Mediator = character(), TotalEffect = numeric(), TotalEffect_CI = character(), TotalEffect_p = numeric(), ADE = numeric(), ADE_CI = character(), ADE_p = numeric(),
+                      ACME = numeric(), ACME_CI = character(), ACME_p = numeric(), PercentMediated = numeric(), PercentMediated_CI = character(), stringsAsFactors = FALSE)
+
+# Loop through each combination of diet, maternal_core, and infant_core
+for (diet in diets) {
+  for (m_core in maternal_core) {
+    for (i_core in infant_core) {
+      
+      # Step 1: Mediator Model
+      med.fit <- lm(as.formula(paste(m_core, "~", diet, "+ Parto")), data = combined_data_CLR)
+      
+      # Step 2: Outcome Model
+      out.fit <- lm(as.formula(paste(i_core, "~", diet, "+", m_core, "+ Parto")), data = combined_data_CLR)
+      
+      # Step 3: Causal Mediation Analysis
+      med.out <- mediate(med.fit, out.fit, treat = diet, mediator = m_core, sims = 1000)
+      
+      # Extracting the required values
+      med.out.summary <- summary(med.out)
+      
+      total_effect <- med.out.summary$tau.coef
+      total_effect_CI <- paste(med.out.summary$tau.ci[1], "-", med.out.summary$tau.ci[2])
+      total_effect_p <- med.out.summary$tau.p
+      ade <- med.out.summary$d0
+      ade_CI <- paste(med.out.summary$d0.ci[1], "-", med.out.summary$d0.ci[2])
+      ade_p <- med.out.summary$d0.p
+      acme <- med.out.summary$z0
+      acme_CI <- paste(med.out.summary$z0.ci[1], "-", med.out.summary$z0.ci[2])
+      acme_p <- med.out.summary$z0.p
+      percent_mediated <- (acme / total_effect)
+      percent_mediated_CI <- paste((med.out.summary$z0.ci[1] / med.out.summary$tau.coef), "-", (med.out.summary$z0.ci[2] / med.out.summary$tau.coef))
+      
+      # Check for negative percent mediated and set to NA if found
+      if (percent_mediated < 0) {
+        percent_mediated <- NA
+      }
+      
+      # Append the results to the results data frame
+      results <- rbind(results, data.frame(Outcome = i_core, Mediator = m_core, 
+                                           TotalEffect = total_effect, 
+                                           TotalEffect_CI = total_effect_CI,
+                                           TotalEffect_p = total_effect_p,
+                                           ADE = ade, 
+                                           ADE_CI = ade_CI,
+                                           ADE_p = ade_p,
+                                           ACME = acme, 
+                                           ACME_CI = acme_CI,
+                                           ACME_p = acme_p,
+                                           PercentMediated = percent_mediated,
+                                           PercentMediated_CI = percent_mediated_CI))
+    }
+  }
+}
+
+# Display the results in the desired format
+print(results)
+
+# Loop casual mediation analysis adjusting and with sensitivity analysis
+
+# Loop through each combination for sensitivity analysis
+for (diet in diets_sens) {
+  for (m_core in maternal_core) {
+    for (i_core in infant_core) {
+      # Mediator Model
+      med.fit <- lm(as.formula(paste(m_core, "~", diet, "+ Parto")), data = combined_data_CLR)
+      
+      # Outcome Model
+      out.fit <- lm(as.formula(paste(i_core, "~", diet, "+", m_core, "+ Parto")), data = combined_data_CLR)
+      
+      # Causal Mediation Analysis
+      med.out <- mediate(med.fit, out.fit, treat = diet, mediator = m_core, sims = 1000)
+      
+      # Sensitivity Analysis
+      sens.analysis <- medsens(med.out)
+      
+      # Print and plot sensitivity analysis results
+      cat("\nSensitivity Analysis for:", i_core, "mediated by", m_core, "with treatment", diet, "\n")
+      print(summary(sens.analysis))
+      plot(sens.analysis, main = paste("Sensitivity Analysis for", i_core, "mediated by", m_core))
+    }
+  }
+}
