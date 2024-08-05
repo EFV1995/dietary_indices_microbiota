@@ -1,0 +1,49 @@
+# Load necessary libraries
+library(factoextra)
+library(ggplot2)
+library(gridExtra)
+library(ggpubr)
+library(cowplot)
+
+# Perform PCA
+pca_result <- prcomp(indices_n115_test %>% select(-Sample, -Código.x), scale. = TRUE)
+
+# Define custom colors for each variable
+variable_colors <- c("Total_DQI_sum" = "red", "Total_HEI_sum" = "green", "Total_DII_sum" = "blue", "Total_MMDS_sum" = "purple")
+
+# Visualize the PCA biplot
+biplot <- fviz_pca_biplot(pca_result, 
+                geom.ind = "point",  # Show points only (individuals)
+                pointshape = 21, pointsize = 2.5,
+                fill.ind = "lightblue", col.ind = "black",
+                col.var = "steelblue", # Variables color
+                arrows = TRUE,        # Show arrows for variables
+                repel = TRUE,         # Avoid label overplotting
+                legend.title = list(fill = "Sample", color = "Variables")
+             ) +
+  ggpubr::fill_palette("jco") +    # Individual fill color
+  ggpubr::color_palette("npg")     # Variable colors
+
+# Visualize the PCA individuals (samples)
+ind_plot <- fviz_pca_ind(pca_result, 
+                         geom = "point",  # Show points only (individuals)
+                         pointshape = 21, pointsize = 2.5,
+                         fill.ind = "lightblue", col.ind = "black",
+                         repel = TRUE,        # Avoid label overplotting
+                         legend.title = list(fill = "Sample", color = "Variables")
+            ) +
+  ggpubr::fill_palette("jco")    # Individual fill color
+
+# Visualize the PCA variables (arrows) with custom variable colors
+var_plot <- fviz_pca_var(pca_result,
+                         col.var = variable_colors,  # Variables color
+                         arrows = TRUE,       # Show arrows for variables
+                         repel = TRUE         # Avoid label overplotting
+            ) +
+  scale_color_manual(values = variable_colors)  # Variable colors
+
+# Combine the two plots
+combined_plot <- plot_grid(ind_plot, var_plot, nrow = 1)
+
+# Save the combined plot
+ggsave("combined_pca_plot.png", combined_plot, width = 14, height = 7)
