@@ -1,0 +1,123 @@
+# Load necessary libraries
+library(dplyr)
+library(tibble)
+library(pheatmap)
+
+# Define the path to your text file
+file_path <- "C:/Users/..."
+
+# Read the data into R
+data <- read.table(file_path, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+
+# View the imported data
+head(data)
+
+# Set 'Features' as rownames
+data <- tibble::column_to_rownames(data, "Features")
+
+# Transpose and convert to dataframe
+data_t <- as.data.frame(t(data))
+
+# Check the structure of the data
+dim(data_t)
+str(data_t)
+
+# Calculate the average of each column
+column_means <- colMeans(data_t, na.rm = TRUE)
+
+# Sort the columns by their averages in descending order and get the top 15 column names
+top_15_columns <- names(sort(column_means, decreasing = TRUE))[1:15]
+
+# Subset the dataframe to keep only the top 15 columns
+top_15_data <- data_t %>% select(all_of(top_15_columns))
+
+# View the new dataframe
+head(top_15_data)
+
+# Assuming sample_data_indice is your original dataframe
+selected_data <- sample_data_indice %>%
+    select(Total_DII_sum, Total_DQI_sum, Total_MMDS_sum, Total_HEI_sum)
+
+# View the new dataframe
+head(selected_data)
+
+# Combine selected_data and top_15_data
+diet_functions <- as.data.frame(cbind(selected_data, top_15_data))
+
+# View the combined data
+head(diet_functions)
+
+# Calculate the correlation matrix using Pearson's method
+cor_matrix_diet <- cor(diet_functions, use = "complete.obs", method = "pearson")
+
+# Create the heatmap
+pheatmap(cor_matrix_diet, 
+         clustering_distance_rows = "euclidean", 
+         clustering_distance_cols = "euclidean", 
+         clustering_method = "complete", 
+         show_rownames = TRUE, 
+         show_colnames = TRUE,
+         main = "Heatmap of Correlation Matrix")
+
+# Function to calculate correlation matrix with p-values
+cor_test_matrix <- function(mat) {
+  mat <- as.matrix(mat)
+  n <- ncol(mat)
+  p.mat <- matrix(NA, n, n)
+  diag(p.mat) <- 0
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      tmp <- cor.test(mat[, i], mat[, j], method = "pearson")
+      p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    }
+  }
+  colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
+  return(p.mat)
+}
+
+# Calculate the p-values matrix
+p_matrix <- cor_test_matrix(diet_functions)
+
+# Function to replace p-values with asterisks
+p_values_to_asterisks <- function(p.mat) {
+  ast.mat <- matrix("", nrow = nrow(p.mat), ncol = ncol(p.mat))
+  ast.mat[p.mat < 0.05] <- "*"
+  ast.mat[p.mat < 0.01] <- "**"
+  ast.mat[p.mat < 0.001] <- "***"
+  rownames(ast.mat) <- rownames(p.mat)
+  colnames(ast.mat) <- colnames(p.mat)
+  return(ast.mat)
+}
+
+# Replace p-values with asterisks
+p_matrix_asterisks <- p_values_to_asterisks(p_matrix)
+
+# Reorder columns, moving "Total_HEI_sum" to the end
+new_order <- c(setdiff(colnames(cor_matrix_diet), "Total_HEI_sum"), "Total_HEI_sum")
+cor_matrix_diet <- cor_matrix_diet[, new_order]
+p_matrix_asterisks <- p_matrix_asterisks[, new_order]
+
+# Generate the pheatmap and save the object
+p_heatmap <- pheatmap(cor_matrix_diet, 
+                      clustering_distance_rows = "euclidean", 
+                      clustering_distance_cols = "euclidean", 
+                      clustering_method = "complete", 
+                      show_rownames = TRUE, 
+                      show_colnames = TRUE,
+                      display_numbers = p_matrix_asterisks, 
+                      fontsize_row = 10, 
+                      fontsize_col = 10)
+
+# Save the heatmap to a file with increased dimensions
+pheatmap(cor_matrix_diet, 
+         clustering_distance_rows = "euclidean", 
+         clustering_distance_cols = "euclidean", 
+         clustering_method = "complete", 
+         show_rownames = TRUE, 
+         show_colnames = TRUE,
+         display_numbers = p_matrix_asterisks, 
+         fontsize_row = 12, 
+         fontsize_col = 12, 
+         filename = "heatmap_with_asterisks_diet_functions.png",  
+         width = 13,  
+         height = 9)
