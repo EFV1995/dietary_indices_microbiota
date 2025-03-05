@@ -1,0 +1,61 @@
+# Load necessary libraries
+library(ggplot2)
+library(factoextra)
+library(ggpubr)
+library(gridExtra)
+
+# Step 1: Run PCA on dietary indices
+# Define the dietary variables to include in the PCA
+dietary_vars <- c("Total_DII_sum", "Total_DQI_sum", "Total_MMDS_sum", "Total_HEI_sum")
+
+# Run PCA analysis on scaled and centered dietary data
+pca_model <- prcomp(sample_data(physeq_mother_clean)[, dietary_vars], scale. = TRUE, center = TRUE)
+
+# Step 2: Extract PCA scores and loadings
+# Extract scores and add sample IDs and clusters from k-means clustering
+pca_scores <- as.data.frame(pca_model$x)
+pca_scores$SampleID <- rownames(pca_scores)
+pca_scores$Cluster <- kmeans(pca_scores[, 1:2], centers = 2)$cluster  # k-means clustering with 2 centers
+
+# Extract loadings and add variable names
+pca_loadings <- as.data.frame(pca_model$rotation)
+pca_loadings$Variable <- rownames(pca_loadings)
+
+# Step 3: Calculate % variance explained by PC1 and PC2
+explained_var <- summary(pca_model)$importance[2, 1:2] * 100
+
+# Step 4: Create PCA Biplot
+# Create a biplot using ggplot2 with clusters indicated by color
+pca_biplot <- ggplot(pca_scores, aes(x = PC1, y = PC2, color = as.factor(Cluster))) +
+  geom_point(size = 3, alpha = 0.7) +
+  stat_ellipse(aes(fill = as.factor(Cluster)), geom = "polygon", alpha = 0.1) +
+  geom_segment(data = pca_loadings, aes(x = 0, y = 0, xend = PC1 * 2, yend = PC2 * 2), 
+               arrow = arrow(length = unit(0.3, "cm")), color = "black") +
+  geom_text_repel(data = pca_loadings, aes(x = PC1 * 2.2, y = PC2 * 2.2, 
+                                           label = paste0(Variable, "\n(", round(abs(PC1) * 100, 1), "%)")), 
+                  size = 5, color = "black") +
+  theme_minimal() +
+  scale_color_manual(values = c("#E41A1C", "#377EB8", "#4DAF4A")) +
+  xlab(paste0("PC1 (", round(explained_var[1], 2), "% variance)")) +
+  ylab(paste0("PC2 (", round(explained_var[2], 2), "% variance)")) +
+  ggtitle("PCA Biplot of Dietary Indices") +
+  theme(text = element_text(size = 16),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12))
+
+# Step 5: Create Loadings Bar Chart
+# Bar chart of loadings to show the contributions of each dietary index to PC1
+loadings_plot <- ggplot(pca_loadings, aes(x = reorder(Variable, PC1), y = PC1)) +
+  geom_bar(stat = "identity", fill = "#377EB8") +
+  coord_flip() +
+  theme_minimal() +
+  xlab("") + ylab("Contribution to PC1") +
+  ggtitle("PCA Loadings (Contributions of Dietary Indices)")
+
+# Step 6: Combine Both Plots
+# Combine biplot and loadings bar chart into a single graphic object
+combined_plot <- ggarrange(pca_biplot, loadings_plot, ncol = 1, heights = c(2, 1))
+
+# Step 7: Save the Combined Plot
+# Save the combined plot as a PNG file
+ggsave("PCA_Biplot_Dietary_Indices.png", plot = combined_plot, width = 11.2, height = 9.5, dpi = 300)
